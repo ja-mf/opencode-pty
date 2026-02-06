@@ -23,9 +23,11 @@ export class PTYServer implements Disposable {
   public readonly server: Server<undefined>
   private readonly staticRoutes: Record<string, Response>
   private readonly stack = new DisposableStack()
+  private readonly hostname: string
 
-  private constructor(staticRoutes: Record<string, Response>) {
+  private constructor(staticRoutes: Record<string, Response>, hostname: string) {
     this.staticRoutes = staticRoutes
+    this.hostname = hostname
     this.server = this.startWebServer()
     this.stack.use(this.server)
     this.stack.use(new CallbackManager(this.server))
@@ -35,14 +37,15 @@ export class PTYServer implements Disposable {
     this.stack.dispose()
   }
 
-  public static async createServer(): Promise<PTYServer> {
+  public static async createServer(hostname = '127.0.0.1'): Promise<PTYServer> {
     const staticRoutes = await buildStaticRoutes()
 
-    return new PTYServer(staticRoutes)
+    return new PTYServer(staticRoutes, hostname)
   }
 
   private startWebServer(): Server<undefined> {
     return Bun.serve({
+      hostname: this.hostname,
       port: 0,
 
       routes: {

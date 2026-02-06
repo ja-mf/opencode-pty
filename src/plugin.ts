@@ -16,13 +16,21 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
   initManager(client)
   let ptyServer: PTYServer | undefined
 
+  // Hostname configuration priority:
+  // 1. opencode-pty.hostname (plugin-specific config)
+  // 2. server.hostname (OpenCode web server config)
+  // 3. '127.0.0.1' (secure default - localhost only)
+  const config = await client.config.get()
+  const hostname =
+    (config.data as any)?.['opencode-pty']?.hostname ?? config.data?.server?.hostname ?? '127.0.0.1'
+
   return {
     'command.execute.before': async (input) => {
       if (input.command !== ptyOpenClientCommand) {
         return
       }
       if (ptyServer === undefined) {
-        ptyServer = await PTYServer.createServer()
+        ptyServer = await PTYServer.createServer(hostname)
       }
       open(ptyServer.server.url.origin)
       throw new Error('Command handled by PTY plugin')
